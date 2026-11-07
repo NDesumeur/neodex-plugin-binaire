@@ -1,0 +1,22 @@
+{
+  "id": "neodex.binaire",
+  "name": "Binaire",
+  "version": "1.0.0",
+  "author": "NDesumeur",
+  "description": "Remplis la grille de soleils et de lunes : jamais trois pareils à la suite, autant de chaque par ligne et par colonne, et deux lignes jamais identiques.",
+  "icon": "icon.png",
+  "entry": "index.js",
+  "view": "binaire",
+  "neobase": ">=4.0.0",
+  "type": "app",
+  "category": "Jeux",
+  "syncMode": "progression",
+  "syncInfo": "Records de temps par taille.",
+  "mobile": false,
+  "system": false,
+  "dependencies": {},
+  "sdk": "2.1.0",
+  "permissions": [
+    "storage"
+  ]
+}
