@@ -1,7 +1,7 @@
 {
   "id": "neodex.binaire",
   "name": "Binaire",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "NDesumeur",
   "description": "Casse-tête de logique : remplis la grille de soleils et de lunes, jamais trois pareils à la suite, autant de chaque par ligne et par colonne, et deux lignes jamais identiques. Grilles de 6, 8 ou 10 cases générées avec une solution unique ; clic pour alterner, clic droit pour une lune, les erreurs et les compteurs s'allument au bord, et le chrono garde ton record par taille.",
   "icon": "icon.png",
