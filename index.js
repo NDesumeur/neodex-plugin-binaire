@@ -2,10 +2,10 @@
 // Jeu NeoDex en pixel art dessiné à la main (police bitmap, cadres et boutons en pixels). Il tourne dans le bac à sable de NeoDex.
 const HTML = `<div class="appWrap wide">
   <div class="agHead"><span class="label">Binaire</span><span class="hint">Clic : soleil, lune, vide · clic droit : lune · Retour : annuler</span></div>
-  <div class="gMain"><div class="gameBox"><canvas id="gc" width="200" height="210"></canvas></div>
+  <div class="gMain"><div class="gameBox"><canvas id="gc" width="320" height="340"></canvas></div>
     <div class="gSide">
       <div class="sysCard"><b>RECORDS</b><div class="gStats" id="gStats"></div></div>
-      <div class="row"><button class="btn main" id="gNew">NOUVELLE PARTIE</button></div>
+      <div class="row"><button class="btn main" id="gNew">NOUVELLE PARTIE</button><button class="btn" id="bnFs">PLEIN ÉCRAN</button></div>
       <label class="row">Grille <select id="bnSize" class="f"><option value="0">6 × 6</option><option value="1">8 × 8</option><option value="2">10 × 10</option></select></label>
       <div class="hint">Trois pareils à la suite s'allument en rouge. Les barres au bord comptent les soleils : vertes quand la ligne en a juste la moitié.</div><div class="hint">Chaque grille a une seule solution.</div>
     </div></div>
@@ -17,7 +17,9 @@ const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
 .gSide .sysCard{display:flex;flex-direction:column}
 .gStats{display:grid;grid-template-columns:1fr auto;gap:4px 14px}
 .gStats b{text-align:right}
-.gameBox canvas{max-width:480px;aspect-ratio:200/210}`;
+.gameBox canvas{width:min(100%,max(240px,calc((100vh - 200px) * 320 / 340)));height:auto;aspect-ratio:320/340}
+.gameBox:fullscreen{padding:0;display:grid;place-items:center}
+.gameBox:fullscreen canvas{height:100vh;width:auto}`;
 /* ---------- l'habillage pixel art, dessiné à la main : police bitmap (accents compris), cadres, boutons, icônes ----------
    Tout est en pixels pleins, agrandis par 2 sans lissage : aucun dégradé, aucune ombre floue. */
 const PXK = (() => {
@@ -322,7 +324,7 @@ const clock = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStar
 // petits outils communs aux jeux : une toile pré-dessinée, la position du pointeur dans le canevas, un bip
 const cnv = (w, h, fn) => { const c = el('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; fn(g); return c; };
 const spr = (rows, pal) => cnv(Math.max(...rows.map(r => r.length)), rows.length, g => sprite(g, rows, 0, 0, pal));
-const W = 200, H = 210, cv = $('gc'), g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+const W = 320, H = 340, cv = $('gc'), g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
 const cpos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
 let actx = null;
 const beep = (f, d = .1, type = 'square', slide = 0, vol = .08) => { try { actx ??= new AudioContext(); const o = actx.createOscillator(), gn = actx.createGain(), t = actx.currentTime; o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d); gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(gn).connect(actx.destination); o.start(t); o.stop(t + d + .02); } catch {} };
@@ -364,55 +366,109 @@ function bnGen(n, seed) {
 function bnNew() {
   const n = BN_SIZES[bns.size], seed = Math.floor(Math.random() * 1e9); $('gStats').replaceChildren(el('span', '', 'Préparation…'));
   setTimeout(() => {
-    const {full, puz} = bnGen(n, seed), C = Math.floor(Math.min(W - 16, H - 34) / n);
-    bn = Object.assign(bn || {tick: 0, raf: 0}, {mode: 'play', n, full, fixed: puz.map(r => r.map(v => v >= 0)), gr: puz.map(r => r.slice()), C, X0: Math.floor((W - n * C) / 2), Y0: 24, t0: performance.now(), endAt: 0, hist: []});
-    bnInfo(); gameLoop(bn, 'binaire', () => {}, bnDraw);
+    const {full, puz} = bnGen(n, seed), C = Math.floor(Math.min(W - 30, H - 56) / n);
+    bn = Object.assign(bn || {tick: 0, raf: 0}, {mode: 'play', n, full, fixed: puz.map(r => r.map(v => v >= 0)), gr: puz.map(r => r.slice()), C, X0: Math.floor((W - n * C - 8) / 2), Y0: 40, ms: 0, endAt: 0, hist: [],
+      anim: puz.map(r => r.map(() => -99)), sparks: []});
+    bnInfo(); gameLoop(bn, 'binaire', bnUpdate, bnDraw);
   }, 20);
 }
-const BN_P = {k: '#05010b', y: '#ffd84a', Y: '#fff4a0', o: '#ff9a3d', b: '#b0c8ff', B: '#e8f0ff', d: '#5a6aa0'};
-const BN_SUN = spr(['....k.k....', '.k..kyk..k.', '..kkyyykk..', '..kyYYyyk..', 'kkyYYyyyykk', 'kyyyyyyyyok', 'kkyyyyyyokk', '..kyyyyok..', '..kkooookk.', '.k..kok..k.', '....k.k....'], BN_P);
-const BN_MOON = spr(['...kkkk....', '..kBBbbk...', '.kBbbbk....', 'kBbbbk.....', 'kbbbbk.....', 'kbbdbk.....', 'kbbbbbk....', 'kbbbbbbk.kk', '.kbdbbbbkbk', '..kkbbbbbk.', '....kkkkk..'], BN_P);
-function bnErrors() {  // les cases qui forment un triple ou dépassent la moitié (montrées en rouge)
+// le chrono avance seulement pendant que la partie tourne : quitter l'onglet le met en pause
+const bnUpdate = () => { bn.ms += 1000 / 60; };
+/* les dessins : soleils, lunes et cases sont tracés pixel par pixel à la taille des cases, une fois par taille */
+const bnArt = {};
+const bnDisc = (C, fn) => cnv(C, C, b => { const c = (C - 1) / 2; for (let y = 0; y < C; y++) for (let x = 0; x < C; x++) { const col = fn(x - c, y - c, c); if (col) px(b, col, x, y); } });
+function bnSprites(C) {
+  if (bnArt[C]) return bnArt[C];
+  const r = C * .3;
+  const sun = bnDisc(C, (x, y) => {
+    const d = Math.hypot(x, y), an = Math.atan2(y, x), ray = Math.abs(((an / (Math.PI / 4)) % 1 + 1) % 1 - .5) < .17 - (d - r) / (r * 4);
+    if (d > r + 1.2 && d < r * 1.75 && ray) return d < r * 1.4 ? '#ffb030' : '#ff8a2a';
+    if (d > r + 1.2) return null;
+    if (d > r) return '#05010b';
+    const lt = -(x * .6 + y * .8) / r;
+    if (Math.hypot(x + r * .4, y + r * .45) < r * .18) return '#fffbe0';
+    return d > r * .82 ? (lt > 0 ? '#ffc840' : '#e07a20') : lt > .35 ? '#fff4a0' : lt > -.3 ? '#ffd84a' : '#f0a830';
+  });
+  const moon = bnDisc(C, (x, y) => {
+    const R = r * 1.15, d = Math.hypot(x, y), cut = Math.hypot(x - R * .55, y + R * .3);
+    if (d > R + 1 || cut < R * .78 - 1) return null;
+    if (d > R || cut < R * .78) return '#05010b';
+    if (Math.hypot(x + R * .3, y - R * .35) < R * .14 || Math.hypot(x + R * .55, y + R * .1) < R * .1) return '#7a8ac0';
+    const lt = -(x * .7 + y * .5) / R;
+    return d > R * .86 ? '#8a9ad0' : lt > .3 ? '#ffffff' : lt > -.25 ? '#d8e4ff' : '#a8b8e8';
+  });
+  const tile = (top, mid, bot, rivet) => cnv(C - 1, C - 1, b => {
+    px(b, mid, 0, 0, C - 1, C - 1); px(b, top, 0, 0, C - 1, 2); px(b, top, 0, 0, 2, C - 1); px(b, bot, 0, C - 3, C - 1, 2); px(b, bot, C - 3, 0, 2, C - 1);
+    if (rivet) for (const [x, y] of [[4, 4], [C - 7, 4], [4, C - 7], [C - 7, C - 7]]) { px(b, rivet, x, y, 2, 2); px(b, '#05010b', x + 1, y + 1, 1, 1); }
+  });
+  return bnArt[C] = {sun, moon, free: tile('#3a4a7a', '#26305a', '#141a36'), fixed: tile('#5a6488', '#3e4668', '#20253e', '#8a94b8'), bad: tile('#c04050', '#7a1e30', '#3a0a16'), win: tile('#ffd870', '#9a6a1c', '#5a3a08')};
+}
+// le ciel derrière la grille : il passe doucement du jour à la nuit, nuages le jour, étoiles la nuit
+const BN_STARS = Array.from({length: 60}, (_, i) => { const r = seeded(900 + i); return [r() * W, r() * H, r() * 6.28]; });
+const bnSky = [['#4a90e0', '#6aaaf0', '#90c4f8', '#b8dcff'], ['#060818', '#0a1028', '#101a3a', '#1a2450']].map(cols => cnv(W, H, b => { for (let y = 0; y < H; y++) px(b, cols[Math.min(3, Math.floor(y / H * 4 + ((y * 7) % 3 === 0 ? .15 : 0)))], 0, y, W, 1); }));
+function bnBack(t) {
+  const night = .5 - .5 * Math.cos(t / 2400 * Math.PI * 2);  // un tour complet en un peu plus de 2 minutes
+  g.drawImage(bnSky[0], 0, 0); g.globalAlpha = night; g.drawImage(bnSky[1], 0, 0);
+  for (const [x, y, p] of BN_STARS) { g.globalAlpha = night * (.5 + .5 * Math.sin(t / 25 + p)); px(g, '#ffffff', x, y, 1, 1); }
+  g.globalAlpha = 1 - night;
+  for (let i = 0; i < 4; i++) { const x = ((i * 97 + t * (.1 + i * .03)) % (W + 80)) - 60, y = 20 + i * 76; px(g, '#ffffff', x, y, 40, 6); px(g, '#ffffff', x + 8, y - 4, 22, 4); px(g, '#e0eeff', x, y + 6, 40, 2); }
+  g.globalAlpha = 1;
+}
+function bnErrors() {  // les cases qui forment un triple (montrées en rouge)
   const bad = new Set(), {n, gr} = bn;
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) for (const [dx, dy] of [[1, 0], [0, 1]]) { const v = gr[y][x]; if (v >= 0 && gr[y + dy]?.[x + dx] === v && gr[y + 2 * dy]?.[x + 2 * dx] === v) for (let i = 0; i < 3; i++) bad.add((x + dx * i) + ',' + (y + dy * i)); }
   return bad;
 }
 function bnDraw() {
-  const {n, C, X0, Y0, gr} = bn, bad = bnErrors();
-  for (let y = 0; y < H; y++) px(g, y % 4 < 2 ? '#0c1020' : '#0a0e1c', 0, y, W, 1);
-  px(g, '#05010b', X0 - 3, Y0 - 3, n * C + 6, n * C + 6);
+  const {n, C, X0, Y0, gr} = bn, bad = bnErrors(), A = bnSprites(C), t = bn.tick, won = bn.mode === 'won', wt = t - bn.endAt;
+  bnBack(t);
+  px(g, 'rgba(5,1,11,.55)', X0 - 6, Y0 - 6, n * C + 20, n * C + 20); px(g, '#05010b', X0 - 3, Y0 - 3, n * C + 5, n * C + 5);
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-    const X = X0 + x * C, Y = Y0 + y * C, v = gr[y][x], fx = bn.fixed[y][x];
-    px(g, bad.has(x + ',' + y) ? '#5a1420' : fx ? '#262c48' : (x + y) % 2 ? '#1a2038' : '#161c32', X, Y, C - 1, C - 1);
-    if (v >= 0) { const img = v ? BN_SUN : BN_MOON; g.drawImage(img, X + Math.floor((C - 1 - 11) / 2), Y + Math.floor((C - 1 - 11) / 2)); if (fx) px(g, '#4a5480', X + 1, Y + C - 3, 2, 1); }
+    const X = X0 + x * C, Y = Y0 + y * C, v = gr[y][x], wave = won ? wt - (x + y) * 3 : -1;
+    g.drawImage(wave >= 0 && wave < 40 ? A.win : bad.has(x + ',' + y) ? A.bad : bn.fixed[y][x] ? A.fixed : A.free, X, Y);
+    if (v < 0) continue;
+    const k = (t - bn.anim[y][x]) / 14, hop = k < 1 ? Math.round(Math.sin(k * Math.PI) * C * .18) : wave >= 0 && wave < 20 ? Math.round(Math.sin(wave / 20 * Math.PI) * C * .25) : 0;
+    g.drawImage(v ? A.sun : A.moon, X, Y - hop);
+    if (k < 1) { g.strokeStyle = v ? 'rgba(255,216,74,' + (1 - k).toFixed(2) + ')' : 'rgba(216,228,255,' + (1 - k).toFixed(2) + ')'; g.lineWidth = 2; g.beginPath(); g.arc(X + C / 2, Y + C / 2, C * (.3 + k * .3), 0, 7); g.stroke(); }
   }
-  const half = n / 2; for (let i = 0; i < n; i++) {  // compteurs : soleils de chaque ligne et colonne (vert quand c'est complet et juste)
-    const r = gr[i].filter(v => v === 1).length, c = gr.map(rr => rr[i]).filter(v => v === 1).length;
-    px(g, r === half ? '#5fdf6a' : r > half ? '#ff4a5a' : '#3a4060', X0 + n * C + 2, Y0 + i * C + 2, 2, C - 5); px(g, c === half ? '#5fdf6a' : c > half ? '#ff4a5a' : '#3a4060', X0 + i * C + 2, Y0 + n * C + 2, C - 5, 2);
+  const half = n / 2; for (let i = 0; i < n; i++) {  // compteurs : soleils de chaque ligne et colonne (vert quand c'est juste la moitié, rouge quand il y en a trop)
+    const r = gr[i].filter(v => v === 1).length, c = gr.map(rr => rr[i]).filter(v => v === 1).length, col = s => s === half ? '#5fdf6a' : s > half ? '#ff4a5a' : '#4a5480';
+    px(g, '#05010b', X0 + n * C + 2, Y0 + i * C + 2, 6, C - 4); px(g, col(r), X0 + n * C + 3, Y0 + i * C + 3 + Math.round((C - 6) * (1 - Math.min(r, half) / half)), 4, Math.round((C - 6) * Math.min(r, half) / half) || 1);
+    px(g, '#05010b', X0 + i * C + 2, Y0 + n * C + 2, C - 4, 6); px(g, col(c), X0 + i * C + 3, Y0 + n * C + 3, Math.round((C - 6) * Math.min(c, half) / half) || 1, 4);
   }
-  const sec = Math.floor(((bn.mode === 'won' ? bn.wonMs : performance.now()) - bn.t0) / 1000);
-  pxFont(g, n + ' × ' + n, X0, 14, '#c8d0f0', 6); pxFont(g, clock(sec), X0 + n * C, 14, '#ffffff', 6, 'right');
-  if (bn.mode === 'won' && bn.tick - bn.endAt > 20) gameText(g, W, [['GRILLE RÉSOLUE !', '#5fdf6a', 10], ['en ' + clock(sec), '#ffffff'], ['Clic : nouvelle grille', '#ffd84a']], H / 2 - 10);
+  // le bandeau : taille, cases remplies, chrono
+  const filled = gr.flat().filter(v => v >= 0).length;
+  px(g, 'rgba(5,1,11,.78)', 0, 0, W, 26); px(g, '#2a3460', 0, 26, W, 1);
+  pxFont(g, n + ' × ' + n, 8, 17, '#c8d0f0', 8); pxFont(g, filled + ' / ' + n * n, W / 2, 17, '#ffd84a', 8, 'center'); pxFont(g, clock(Math.floor(bn.ms / 1000)), W - 8, 17, '#ffffff', 8, 'right');
+  if (won) {
+    if (wt < 90 && wt % 3 === 0) bn.sparks.push({x: X0 + Math.random() * n * C, y: Y0 + n * C, vx: (Math.random() - .5) * 2, vy: -2 - Math.random() * 3, c: Math.random() < .5 ? '#ffd84a' : '#d8e4ff', l: 60});
+    for (const s of bn.sparks) { s.x += s.vx; s.y += s.vy; s.vy += .08; s.l--; px(g, s.c, s.x, s.y, 2, 2); }
+    bn.sparks = bn.sparks.filter(s => s.l > 0);
+    if (wt > 60) gameText(g, W, [['GRILLE RÉSOLUE !', '#5fdf6a', 16], ['en ' + clock(Math.floor(bn.ms / 1000)), '#ffffff'], ['Clic : nouvelle grille', '#ffd84a']], H / 2 - 10);
+  }
 }
 function bnSet(x, y, v) {
-  if (bn.mode !== 'play' || bn.fixed[y][x]) return; bn.hist.push([x, y, bn.gr[y][x]]); bn.gr[y][x] = v; beep(v === 1 ? 660 : v === 0 ? 440 : 300, .03, 'triangle', 0, .05);
-  if (bn.gr.every((r, j) => r.every((c, i) => c === bn.full[j][i]))) { bn.mode = 'won'; bn.endAt = bn.tick; bn.wonMs = performance.now(); bns.done++; const sec = Math.round((bn.wonMs - bn.t0) / 1000), k = 'binaire' + bn.n; if (!games.best[k] || sec < games.best[k]) games.best[k] = sec; saveGames(); bnInfo(); [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .14, 'triangle'), i * 100)); }
+  if (bn.mode !== 'play' || bn.fixed[y][x]) return; bn.hist.push([x, y, bn.gr[y][x]]); bn.gr[y][x] = v; bn.anim[y][x] = v < 0 ? -99 : bn.tick; beep(v === 1 ? 660 : v === 0 ? 440 : 300, .03, 'triangle', 0, .05);
+  if (bn.gr.every((r, j) => r.every((c, i) => c === bn.full[j][i]))) { bn.mode = 'won'; bn.endAt = bn.tick; bns.done++; const sec = Math.round(bn.ms / 1000), k = 'binaire' + bn.n; if (!games.best[k] || sec < games.best[k]) games.best[k] = sec; saveGames(); bnInfo(); [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .14, 'triangle'), i * 100)); }
 }
 cv.onpointerdown = e => {
-  e.preventDefault(); if (!bn) return; if (bn.mode === 'won') { if (bn.tick - bn.endAt > 20) bnNew(); return; }
+  e.preventDefault(); if (!bn) return; if (bn.mode === 'won') { if (bn.tick - bn.endAt > 60) bnNew(); return; }
   const [mx, my] = cpos(e), x = Math.floor((mx - bn.X0) / bn.C), y = Math.floor((my - bn.Y0) / bn.C); if (x < 0 || y < 0 || x >= bn.n || y >= bn.n) return;
   const v = bn.gr[y][x]; bnSet(x, y, e.button === 2 ? (v === 0 ? -1 : 0) : (v === -1 ? 1 : v === 1 ? 0 : -1));  // clic : vide → soleil → lune → vide ; clic droit : lune
 };
 cv.oncontextmenu = e => e.preventDefault();
-document.addEventListener('keydown', e => { if (!keyOk(e) || !bn) return; if (e.key === 'Backspace') { e.preventDefault(); const h = bn.hist.pop(); if (h && bn.mode === 'play') bn.gr[h[1]][h[0]] = h[2]; } });
+document.addEventListener('keydown', e => { if (!keyOk(e) || !bn) return; if (e.key === 'Backspace') { e.preventDefault(); const h = bn.hist.pop(); if (h && bn.mode === 'play') { bn.gr[h[1]][h[0]] = h[2]; bn.anim[h[1]][h[0]] = -99; } } });
 function bnInfo() { const b = games.best['binaire' + BN_SIZES[bns.size]]; showStats([['Record en ' + BN_SIZES[bns.size] + ' × ' + BN_SIZES[bns.size], b ? clock(b) : '—'], ['Grilles résolues', bns.done]]); $('bnSize').value = bns.size; }
 $('gNew').onclick = () => { bnNew(); $('gNew').blur(); };
+$('bnFs').onclick = () => { cv.parentElement.requestFullscreen?.().catch(() => {}); $('bnFs').blur(); };
 $('bnSize').onchange = () => { bns.size = +$('bnSize').value; saveGames(); bnNew(); $('bnSize').blur(); };
 {  // vérification : une grille générée a une seule solution, et cette solution respecte toutes les règles
   const {full, puz} = bnGen(6, 42), t = puz.map(r => r.slice()); let ok = bnSolve(t, 6, 2) === 1;
   for (let y = 0; y < 6; y++) for (let x = 0; x < 6; x++) ok &&= bnValid(full, 6, x, y);
-  console.assert(ok && puz.flat().includes(-1), 'binaire');
+  ok &&= puz.flat().includes(-1) && BN_SIZES.every(n => Math.floor(Math.min(W - 30, H - 56) / n) >= 24);
+  console.assert(ok, 'binaire'); view.dataset.selfcheck = ok ? 'ok' : 'grille';
 }
-ctx.onOpen(() => { if (!bn) bnNew(); else gameLoop(bn, 'binaire', () => {}, bnDraw); });
+const bnOpen = () => { if (!bn) return bnNew(); if (bn.mode === 'pause') bn.mode = 'play'; gameLoop(bn, 'binaire', bnUpdate, bnDraw); };  // revenir sur l'onglet relance la partie là où elle était
+ctx.onOpen(() => { cv.__bn = {st: () => bn, open: bnOpen}; bnOpen(); });
 
 }

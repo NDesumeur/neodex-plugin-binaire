@@ -6,7 +6,7 @@
  "BINAIRE": "BINARY",
  "Backspace": "Backspace",
  "Binaire": "Binary",
- "Casse-tête de logique : remplis la grille de soleils et de lunes, jamais trois pareils à la suite, autant de chaque par ligne et par colonne, et deux lignes jamais identiques. Grilles de 6, 8 ou 10 cases générées avec une solution unique ; clic pour alterner, clic droit pour une lune, les erreurs et les compteurs s'allument au bord, et le chrono garde ton record par taille.": "A logic puzzle: fill the grid with suns and moons, never three alike in a row, as many of each per row and column, and no two rows identical. 6, 8 or 10-wide grids generated with a unique solution; click to cycle, right-click for a moon, mistakes and counters light up along the edge, and the timer keeps your record per size.",
+ "Casse-tête de logique : remplis la grille de soleils et de lunes, jamais trois pareils à la suite, autant de chaque par ligne et par colonne, et deux lignes jamais identiques. Grilles de 6, 8 ou 10 cases générées avec une solution unique, grands soleils et lunes dessinés, ciel qui passe du jour à la nuit, vague dorée à la victoire ; clic pour alterner, clic droit pour une lune, compteurs au bord, chrono en pause quand tu quittes l'onglet, plein écran, et l'affichage s'adapte à la taille de la fenêtre.": "Logic puzzle: fill the grid with suns and moons, never three alike in a row, as many of each per row and column, and no two rows the same. 6, 8 or 10-cell grids generated with a unique solution, big hand-drawn suns and moons, a sky that turns from day to night, a golden wave when you win; click to cycle, right-click for a moon, counters along the edge, the timer pauses when you leave the tab, fullscreen, and the display adapts to the window size.",
  "Ce plugin doit être approuvé par NeoDex pour s'ouvrir.": "This plugin must be approved by NeoDex to open.",
  "Chaque grille a une seule solution.": "Each grid has only one solution.",
  "Clic : nouvelle grille": "Click: new grid",
@@ -50,6 +50,7 @@
  "Oa": "Oh",
  "Oc": "Oc",
  "Od": "Od",
+ "PLEIN ÉCRAN": "FULLSCREEN",
  "Préparation…": "Preparation…",
  "RECORDS": "RECORDS",
  "Record en": "Record in",
@@ -58,5 +59,13 @@
  "Ua": "Ua",
  "Uc": "Uc",
  "Ud": "Ud",
- "Ug": "Ug"
+ "Ug": "Ug",
+ "grille 6 × 6 résolue au clic · pause et reprise de l’onglet · fenêtre": "6 × 6 grid solved by clicks · tab pause and resume · window",
+ "la grille 6 × 6 ne se crée pas": "the 6 × 6 grid is not created",
+ "la grille remplie au clic n’est pas résolue": "the grid filled by clicks is not solved",
+ "la partie reste en pause après le retour sur l’onglet": "the game stays paused after returning to the tab",
+ "le chrono a couru pendant l’absence": "the timer ran while away",
+ "le plein écran ne remplit pas la hauteur": "fullscreen does not fill the height",
+ "mise en page :": "layout:",
+ "vérification interne :": "self-check:"
 }

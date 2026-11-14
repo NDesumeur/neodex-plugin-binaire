@@ -1,6 +1,6 @@
 # Binaire (Binary)
 
-A logic puzzle on a square grid: fill each cell with a sun or a moon following three simple rules. Each grid is generated at random and has only one solution, found by deduction, without ever guessing.
+A logic puzzle on a square grid: fill each cell with a sun or a moon following three simple rules. Each grid is generated at random and has only one solution, found by deduction (large grids sometimes ask you to test a guess).
 
 *Version française : [README.md](README.md)*
 
@@ -15,14 +15,16 @@ A logic puzzle on a square grid: fill each cell with a sun or a moon following t
 - **Click** a cell: empty → sun → moon → empty.
 - **Right-click**: places a moon directly (or empties the cell if it already is one).
 - **Backspace** undoes the last move, as many times as you like.
-- The starting cells, darker and marked with a small line, are fixed.
+- The starting cells, lighter and riveted at the four corners, are fixed.
+- Each symbol you place hops with a small flash; behind the grid, the sky slowly turns from day (clouds) to night (stars).
+- **Fullscreen** enlarges the grid to the whole screen (Escape to leave). Outside fullscreen, the grid takes all the room the window allows, small or large.
 - **New game** draws a new grid; the **Grid** list chooses the size: 6 × 6, 8 × 8 or 10 × 10.
 
 ## The aids
 
 - Three identical symbols in a row **light up in red**.
 - The **bars along the edge** count the suns in each row (on the right) and each column (at the bottom): grey while some are missing, **green** when there are exactly half, **red** when there are too many.
-- The grid is finished as soon as every cell matches the solution: "Grid solved!" appears with your time.
+- The grid is finished as soon as every cell matches the solution: a golden wave sweeps the grid, then "Grid solved!" appears with your time.
 
 ## How grids are made
 
@@ -30,7 +32,7 @@ A complete valid grid is first drawn at random, then cells are removed one by on
 
 ## Statistics
 
-The timer runs during the game. The Records panel shows your **best time** for the chosen size and the number of **grids solved**.
+The timer runs during the game and pauses when you leave the tab. The Records panel shows your **best time** for the chosen size and the number of **grids solved**.
 
 ## Data and sync
 

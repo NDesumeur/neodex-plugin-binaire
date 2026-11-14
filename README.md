@@ -1,6 +1,6 @@
 # Binaire
 
-Un casse-tête de logique sur une grille carrée : remplis chaque case d'un soleil ou d'une lune en respectant trois règles simples. Chaque grille est générée au hasard et n'a qu'une seule solution, qu'on trouve par déduction, sans jamais deviner.
+Un casse-tête de logique sur une grille carrée : remplis chaque case d'un soleil ou d'une lune en respectant trois règles simples. Chaque grille est générée au hasard et n'a qu'une seule solution, qu'on trouve par déduction (les grandes grilles demandent parfois de tester une hypothèse).
 
 *English version: [README.en.md](README.en.md)*
 
@@ -15,14 +15,16 @@ Un casse-tête de logique sur une grille carrée : remplis chaque case d'un sole
 - **Clic** sur une case : vide → soleil → lune → vide.
 - **Clic droit** : pose directement une lune (ou vide la case si c'en est déjà une).
 - **Retour** annule le dernier coup, autant de fois que tu veux.
-- Les cases de départ, plus foncées et marquées d'un petit trait, sont fixes.
+- Les cases de départ, plus claires et rivetées aux quatre coins, sont fixes.
+- Chaque symbole posé saute avec un petit éclat ; derrière la grille, le ciel passe doucement du jour (nuages) à la nuit (étoiles).
+- **Plein écran** agrandit la grille sur tout l'écran (Échap pour sortir). Hors plein écran, la grille prend toute la place que permet la fenêtre, petite ou grande.
 - **Nouvelle partie** tire une nouvelle grille ; la liste **Grille** choisit la taille : 6 × 6, 8 × 8 ou 10 × 10.
 
 ## Les aides
 
 - Trois symboles pareils à la suite **s'allument en rouge**.
 - Les **barres au bord** de la grille comptent les soleils de chaque ligne (à droite) et de chaque colonne (en bas) : grises tant qu'il en manque, **vertes** quand il y en a juste la moitié, **rouges** quand il y en a trop.
-- La grille est finie dès que toutes les cases correspondent à la solution : « Grille résolue ! » s'affiche avec ton temps.
+- La grille est finie dès que toutes les cases correspondent à la solution : une vague dorée traverse la grille, puis « Grille résolue ! » s'affiche avec ton temps.
 
 ## Comment les grilles sont faites
 
@@ -30,7 +32,7 @@ Une grille complète valide est d'abord tirée au hasard, puis les cases sont re
 
 ## Statistiques
 
-Le chrono tourne pendant la partie. Le panneau Records montre ton **meilleur temps** pour la taille choisie et le nombre de **grilles résolues**.
+Le chrono tourne pendant la partie et se met en pause quand tu quittes l'onglet. Le panneau Records montre ton **meilleur temps** pour la taille choisie et le nombre de **grilles résolues**.
 
 ## Données et synchronisation
 
