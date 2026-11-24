@@ -19,6 +19,14 @@ module.exports = async ({ pj, sleep }) => {
   await sleep(400); await shot('2-vague');
   if (await S('b.mode') !== 'won') throw new Error('la grille remplie au clic n’est pas résolue');
   await sleep(1200); await shot('3-fin');
+  // la grille du jour : la même pour tout le monde (deux départs, même grille) ; l'indice explique une technique, puis la pose au second clic
+  const day = [];
+  for (let k = 0; k < 2; k++) { await pj(`document.getElementById('bnDaily').click(), 0`); await sleep(900); day.push(await S('b.daily + ":" + b.n + ":" + b.full.flat().join("")')); }
+  if (day[0] !== day[1] || !day[0].startsWith('true:8')) throw new Error('grille du jour : ' + day.join(' / '));
+  await pj(`document.getElementById('bnHint').click(), 0`); await sleep(300); await shot('5-indice');
+  const tip = await pj(`document.getElementById('bnTip').textContent`); if (!/^(Paire|Encadrement|Comptage|Ici)/.test(tip)) throw new Error('indice : ' + tip);
+  const before = await S('b.gr.flat().filter(v => v >= 0).length'); await pj(`document.getElementById('bnHint').click(), 0`); await sleep(200);
+  if (await S('b.gr.flat().filter(v => v >= 0).length') !== before + 1) throw new Error('le second clic sur INDICE devait poser la case');
   await pj(`(document.getElementById('bnSize').value = '2', document.getElementById('bnSize').dispatchEvent(new Event('change')), 0)`); await sleep(800); await shot('4-dix');
   const lay = await pj(`(() => { const c = document.getElementById('gc').getBoundingClientRect(), s = document.querySelector('.gSide').getBoundingClientRect(); return { beside: s.left >= c.right - 1, fits: document.documentElement.scrollWidth <= innerWidth + 1, bottom: Math.round(c.bottom), h: Math.round(c.height), wh: innerHeight, w: innerWidth }; })()`);
   if (!lay.fits || lay.bottom > lay.wh + 1 || lay.h < 240 || (lay.w >= 900 && !lay.beside)) throw new Error('mise en page : ' + JSON.stringify(lay));

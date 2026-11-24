@@ -4,6 +4,10 @@ Un casse-tête de logique sur une grille carrée : remplis chaque case d'un sole
 
 *English version: [README.en.md](README.en.md)*
 
+## Grille du jour et indices qui apprennent (nouveau en 1.2.0)
+
+**Grille du jour** : une grille 8 × 8 la même pour tout le monde chaque jour, avec une série de jours (et son record). **Indice** : il montre la technique au lieu de donner la case — paire (deux pareils côte à côte), encadrement (un de chaque côté), comptage (la ligne a déjà sa moitié) — avec les cases utiles en vert ; un second clic pose la case. Une case fausse est signalée d’abord.
+
 ## Les règles
 
 1. **Jamais trois pareils à la suite** : pas trois soleils ni trois lunes côte à côte, en ligne comme en colonne.

@@ -6,11 +6,15 @@ const HTML = `<div class="appWrap wide">
     <div class="gSide">
       <div class="sysCard"><b>RECORDS</b><div class="gStats" id="gStats"></div></div>
       <div class="row"><button class="btn main" id="gNew">NOUVELLE PARTIE</button><button class="btn" id="bnFs">PLEIN ÉCRAN</button></div>
+      <div class="row"><button class="btn" id="bnDaily">GRILLE DU JOUR</button><button class="btn" id="bnHint">INDICE</button></div>
+      <div class="hint bnTip" id="bnTip"></div>
       <label class="row">Grille <select id="bnSize" class="f"><option value="0">6 × 6</option><option value="1">8 × 8</option><option value="2">10 × 10</option></select></label>
       <div class="hint">Trois pareils à la suite s'allument en rouge. Les barres au bord comptent les soleils : vertes quand la ligne en a juste la moitié.</div><div class="hint">Chaque grille a une seule solution.</div>
     </div></div>
 </div>`;
-const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+const CSS = `.bnTip{background:#1a2450;color:#e8eeff;border-left:4px solid #5fdf6a;padding:6px 10px}
+.bnTip:empty{display:none}
+.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
 .gameBox{display:grid;place-items:center;padding:10px;background:#05010b;flex:2;min-width:320px;position:relative}
 .gameBox canvas{width:100%;image-rendering:pixelated;cursor:var(--cp,pointer);touch-action:none}
 .gSide{display:flex;flex-direction:column;gap:14px;flex:1;min-width:250px;max-width:420px}
@@ -333,7 +337,22 @@ const showStats = rows => $('gStats').replaceChildren(...rows.flatMap(([a, b]) =
 
 /* ---------- Binaire : remplir la grille de soleils et de lunes. Jamais trois pareils à la suite, autant de chaque par ligne et par colonne, et deux lignes (ou colonnes) jamais identiques. ---------- */
 const BN_SIZES = [6, 8, 10];
-const bns = gstore('binaire', {size: 1, done: 0});
+const bns = gstore('binaire', {size: 1, done: 0}); bns.daily ??= {last: '', streak: 0, best: 0};
+const bnToday = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const bnYesterday = () => { const d = new Date(Date.now() - 864e5); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+// les indices qui apprennent les techniques : paire, encadrement, comptage (sinon on montre la case)
+const BN_NAME = v => v ? 'soleil' : 'lune';
+function bnLines(n) { const L = []; for (let k = 0; k < n; k++) { L.push({n: 'la ligne ' + (k + 1), c: [...Array(n).keys()].map(i => [i, k])}, {n: 'la colonne ' + (k + 1), c: [...Array(n).keys()].map(i => [k, i])}); } return L; }
+function bnTech(gr, n) {
+  const L = bnLines(n), at = ([x, y]) => gr[y][x];
+  for (const l of L) for (let i = 0; i + 1 < n; i++) { const a = at(l.c[i]); if (a < 0 || at(l.c[i + 1]) !== a) continue;
+    for (const j of [i - 1, i + 2]) if (l.c[j] && at(l.c[j]) < 0) return {x: l.c[j][0], y: l.c[j][1], v: 1 - a, cells: [l.c[i], l.c[i + 1]], tech: 'paire', text: 'Paire : deux ' + BN_NAME(a) + 's côte à côte dans ' + l.n + '. Une troisième ferait trois à la suite, donc la case d’à côté est ' + (a ? 'une lune' : 'un soleil') + '.'}; }
+  for (const l of L) for (let i = 0; i + 2 < n; i++) { const a = at(l.c[i]); if (a < 0 || at(l.c[i + 2]) !== a || at(l.c[i + 1]) >= 0) continue;
+    return {x: l.c[i + 1][0], y: l.c[i + 1][1], v: 1 - a, cells: [l.c[i], l.c[i + 2]], tech: 'encadrement', text: 'Encadrement : un ' + BN_NAME(a) + ' de chaque côté dans ' + l.n + ', donc au milieu il faut l’autre (sinon trois à la suite).'}; }
+  for (const l of L) for (const v of [1, 0]) { const vals = l.c.map(at); if (vals.filter(c => c === v).length !== n / 2) continue; const e = l.c.find(c => at(c) < 0); if (!e) continue;
+    return {x: e[0], y: e[1], v: 1 - v, cells: l.c.filter(c => at(c) === v), tech: 'comptage', text: 'Comptage : ' + l.n + ' a déjà ses ' + n / 2 + ' ' + BN_NAME(v) + 's (la moitié), donc toutes ses cases vides sont de l’autre sorte.'}; }
+  return null;
+}
 let bn = null;
 function bnValid(gr, n, x, y) {  // la case (x, y) respecte-t-elle les règles, vu ce qui est déjà posé ?
   const v = gr[y][x], row = gr[y], col = gr.map(r => r[x]);
@@ -363,12 +382,12 @@ function bnGen(n, seed) {
   for (const [x, y] of cells) { const v = puz[y][x]; puz[y][x] = -1; const t = puz.map(row => row.slice()); if (bnSolve(t, n, 2) !== 1) puz[y][x] = v; }  // on retire tant que la solution reste unique
   return {full, puz};
 }
-function bnNew() {
-  const n = BN_SIZES[bns.size], seed = Math.floor(Math.random() * 1e9); $('gStats').replaceChildren(el('span', '', 'Préparation…'));
+function bnNew(daily = false) {
+  const n = daily ? 8 : BN_SIZES[bns.size], seed = daily ? +bnToday().replace(/-/g, '') : Math.floor(Math.random() * 1e9); bnHelp = null; $('bnTip').textContent = ''; $('gStats').replaceChildren(el('span', '', 'Préparation…'));
   setTimeout(() => {
     const {full, puz} = bnGen(n, seed), C = Math.floor(Math.min(W - 30, H - 56) / n);
     bn = Object.assign(bn || {tick: 0, raf: 0}, {mode: 'play', n, full, fixed: puz.map(r => r.map(v => v >= 0)), gr: puz.map(r => r.slice()), C, X0: Math.floor((W - n * C - 8) / 2), Y0: 40, ms: 0, endAt: 0, hist: [],
-      anim: puz.map(r => r.map(() => -99)), sparks: []});
+      anim: puz.map(r => r.map(() => -99)), sparks: [], daily});
     bnInfo(); gameLoop(bn, 'binaire', bnUpdate, bnDraw);
   }, 20);
 }
@@ -436,10 +455,12 @@ function bnDraw() {
     px(g, '#05010b', X0 + n * C + 2, Y0 + i * C + 2, 6, C - 4); px(g, col(r), X0 + n * C + 3, Y0 + i * C + 3 + Math.round((C - 6) * (1 - Math.min(r, half) / half)), 4, Math.round((C - 6) * Math.min(r, half) / half) || 1);
     px(g, '#05010b', X0 + i * C + 2, Y0 + n * C + 2, C - 4, 6); px(g, col(c), X0 + i * C + 3, Y0 + n * C + 3, Math.round((C - 6) * Math.min(c, half) / half) || 1, 4);
   }
+  if (bnHelp && bn.mode === 'play') { const box = ([x, y], c) => { g.strokeStyle = c; g.lineWidth = 2; g.strokeRect(X0 + x * C + 1, Y0 + y * C + 1, C - 3, C - 3); };
+    bnHelp.cells.forEach(c => box(c, '#5fdf6a')); if ((t >> 3) % 2) box([bnHelp.x, bnHelp.y], '#ffffff'); }
   // le bandeau : taille, cases remplies, chrono
   const filled = gr.flat().filter(v => v >= 0).length;
   px(g, 'rgba(5,1,11,.78)', 0, 0, W, 26); px(g, '#2a3460', 0, 26, W, 1);
-  pxFont(g, n + ' × ' + n, 8, 17, '#c8d0f0', 8); pxFont(g, filled + ' / ' + n * n, W / 2, 17, '#ffd84a', 8, 'center'); pxFont(g, clock(Math.floor(bn.ms / 1000)), W - 8, 17, '#ffffff', 8, 'right');
+  pxFont(g, bn.daily ? 'DU JOUR' : n + ' × ' + n, 8, 17, bn.daily ? '#5fdf6a' : '#c8d0f0', 8); pxFont(g, filled + ' / ' + n * n, W / 2, 17, '#ffd84a', 8, 'center'); pxFont(g, clock(Math.floor(bn.ms / 1000)), W - 8, 17, '#ffffff', 8, 'right');
   if (won) {
     if (wt < 90 && wt % 3 === 0) bn.sparks.push({x: X0 + Math.random() * n * C, y: Y0 + n * C, vx: (Math.random() - .5) * 2, vy: -2 - Math.random() * 3, c: Math.random() < .5 ? '#ffd84a' : '#d8e4ff', l: 60});
     for (const s of bn.sparks) { s.x += s.vx; s.y += s.vy; s.vy += .08; s.l--; px(g, s.c, s.x, s.y, 2, 2); }
@@ -447,9 +468,11 @@ function bnDraw() {
     if (wt > 60) gameText(g, W, [['GRILLE RÉSOLUE !', '#5fdf6a', 16], ['en ' + clock(Math.floor(bn.ms / 1000)), '#ffffff'], ['Clic : nouvelle grille', '#ffd84a']], H / 2 - 10);
   }
 }
+let bnHelp = null;  // l'indice expliqué en cours : {x, y, v, cells}
 function bnSet(x, y, v) {
-  if (bn.mode !== 'play' || bn.fixed[y][x]) return; bn.hist.push([x, y, bn.gr[y][x]]); bn.gr[y][x] = v; bn.anim[y][x] = v < 0 ? -99 : bn.tick; beep(v === 1 ? 660 : v === 0 ? 440 : 300, .03, 'triangle', 0, .05);
-  if (bn.gr.every((r, j) => r.every((c, i) => c === bn.full[j][i]))) { bn.mode = 'won'; bn.endAt = bn.tick; bns.done++; const sec = Math.round(bn.ms / 1000), k = 'binaire' + bn.n; if (!games.best[k] || sec < games.best[k]) games.best[k] = sec; saveGames(); bnInfo(); [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .14, 'triangle'), i * 100)); }
+  if (bn.mode !== 'play' || bn.fixed[y][x]) return; if (bnHelp) { bnHelp = null; $('bnTip').textContent = ''; } bn.hist.push([x, y, bn.gr[y][x]]); bn.gr[y][x] = v; bn.anim[y][x] = v < 0 ? -99 : bn.tick; beep(v === 1 ? 660 : v === 0 ? 440 : 300, .03, 'triangle', 0, .05);
+  if (bn.gr.every((r, j) => r.every((c, i) => c === bn.full[j][i]))) { bn.mode = 'won'; bn.endAt = bn.tick; bns.done++; if (bn.daily && bns.daily.last !== bnToday()) { const d = bns.daily; d.streak = d.last === bnYesterday() ? d.streak + 1 : 1; d.best = Math.max(d.best, d.streak); d.last = bnToday(); }
+    const sec = Math.round(bn.ms / 1000), k = bn.daily ? 'binaireJour' : 'binaire' + bn.n; if (!games.best[k] || sec < games.best[k]) games.best[k] = sec; saveGames(); bnInfo(); [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .14, 'triangle'), i * 100)); }
 }
 cv.onpointerdown = e => {
   e.preventDefault(); if (!bn) return; if (bn.mode === 'won') { if (bn.tick - bn.endAt > 60) bnNew(); return; }
@@ -458,14 +481,28 @@ cv.onpointerdown = e => {
 };
 cv.oncontextmenu = e => e.preventDefault();
 document.addEventListener('keydown', e => { if (!keyOk(e) || !bn) return; if (e.key === 'Backspace') { e.preventDefault(); const h = bn.hist.pop(); if (h && bn.mode === 'play') { bn.gr[h[1]][h[0]] = h[2]; bn.anim[h[1]][h[0]] = -99; } } });
-function bnInfo() { const b = games.best['binaire' + BN_SIZES[bns.size]]; showStats([['Record en ' + BN_SIZES[bns.size] + ' × ' + BN_SIZES[bns.size], b ? clock(b) : '—'], ['Grilles résolues', bns.done]]); $('bnSize').value = bns.size; }
+function bnInfo() { const b = games.best['binaire' + BN_SIZES[bns.size]], d = bns.daily; showStats([['Record en ' + BN_SIZES[bns.size] + ' × ' + BN_SIZES[bns.size], b ? clock(b) : '—'], ['Grilles résolues', bns.done], ['Grille du jour', d.last === bnToday() ? 'faite ✓' : 'à faire'], ['Série de jours', (d.last === bnToday() || d.last === bnYesterday() ? d.streak : 0) + ' (record ' + d.best + ')']]); $('bnSize').value = bns.size; }
 $('gNew').onclick = () => { bnNew(); $('gNew').blur(); };
+$('bnDaily').onclick = () => { bnNew(true); $('bnDaily').blur(); };
+$('bnHint').onclick = () => {  // une case fausse d'abord ; sinon le pas suivant expliqué ; un second clic le pose
+  $('bnHint').blur(); if (!bn || bn.mode !== 'play') return;
+  const bad = bn.gr.flatMap((r, y) => r.map((v, x) => [x, y, v])).find(([x, y, v]) => v >= 0 && v !== bn.full[y][x]);
+  if (bad) { bnHelp = {x: bad[0], y: bad[1], cells: []}; $('bnTip').textContent = 'La case qui clignote est fausse : change-la d’abord.'; return; }
+  if (bnHelp && bn.gr[bnHelp.y][bnHelp.x] < 0) { const h = bnHelp; bnSet(h.x, h.y, h.v); return; }
+  const t = bnTech(bn.gr, bn.n);
+  if (t) { bnHelp = t; $('bnTip').textContent = t.text + ' (INDICE encore une fois pour la poser.)'; }
+  else { const e = bn.gr.flatMap((r, y) => r.map((v, x) => [x, y, v])).find(c => c[2] < 0); if (!e) return; bnHelp = {x: e[0], y: e[1], v: bn.full[e[1]][e[0]], cells: []}; $('bnTip').textContent = 'Ici il faut combiner les règles (deux lignes jamais pareilles, ou essayer une case et voir ce qui casse). La case qui clignote est ' + (bnHelp.v ? 'un soleil' : 'une lune') + '.'; }
+};
 $('bnFs').onclick = () => { cv.parentElement.requestFullscreen?.().catch(() => {}); $('bnFs').blur(); };
 $('bnSize').onchange = () => { bns.size = +$('bnSize').value; saveGames(); bnNew(); $('bnSize').blur(); };
 {  // vérification : une grille générée a une seule solution, et cette solution respecte toutes les règles
   const {full, puz} = bnGen(6, 42), t = puz.map(r => r.slice()); let ok = bnSolve(t, 6, 2) === 1;
   for (let y = 0; y < 6; y++) for (let x = 0; x < 6; x++) ok &&= bnValid(full, 6, x, y);
   ok &&= puz.flat().includes(-1) && BN_SIZES.every(n => Math.floor(Math.min(W - 30, H - 56) / n) >= 24);
+  const g6 = () => Array.from({length: 6}, () => Array(6).fill(-1)); let a = g6(); a[0][1] = a[0][2] = 1; const tp = bnTech(a, 6); ok &&= tp?.tech === 'paire' && tp.x === 0 && tp.y === 0 && tp.v === 0;
+  a = g6(); a[2][0] = a[2][2] = 0; const te = bnTech(a, 6); ok &&= te?.tech === 'encadrement' && te.x === 1 && te.y === 2 && te.v === 1;
+  a = g6(); a[4] = [1, 1, 0, 1, -1, -1]; const tc = bnTech(a, 6); ok &&= tc?.tech === 'comptage' && tc.y === 4 && tc.x === 4 && tc.v === 0;
+  const p2 = puz.map(r => r.slice()); for (let s, k = 0; k < 36 && (s = bnTech(p2, 6)); k++) { if (s.v !== full[s.y][s.x]) { ok = false; break; } p2[s.y][s.x] = s.v; }
   console.assert(ok, 'binaire'); view.dataset.selfcheck = ok ? 'ok' : 'grille';
 }
 const bnOpen = () => { if (!bn) return bnNew(); if (bn.mode === 'pause') bn.mode = 'play'; gameLoop(bn, 'binaire', bnUpdate, bnDraw); };  // revenir sur l'onglet relance la partie là où elle était

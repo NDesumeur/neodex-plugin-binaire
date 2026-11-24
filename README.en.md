@@ -4,6 +4,10 @@ A logic puzzle on a square grid: fill each cell with a sun or a moon following t
 
 *Version française : [README.md](README.md)*
 
+## Daily grid and hints that teach (new in 1.2.0)
+
+**Daily grid**: one 8 × 8 grid, the same for everyone each day, with a day streak (and its best). **Hint**: it shows the technique instead of giving the cell — pair (two alike side by side), sandwich (one on each side), counting (the line already has its half) — with the useful cells in green; a second click places the cell. A wrong cell is pointed out first.
+
 ## The rules
 
 1. **Never three in a row**: no three suns or three moons side by side, in a row or a column.
