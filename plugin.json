@@ -1,7 +1,7 @@
 {
   "id": "neodex.binaire",
   "name": "Binaire",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "NDesumeur",
   "description": "Casse-tête de logique : remplis la grille de soleils et de lunes, jamais trois pareils à la suite, autant de chaque par ligne et par colonne, et deux lignes jamais identiques. Grilles de 6, 8 ou 10 cases générées avec une solution unique, grands soleils et lunes dessinés, ciel qui passe du jour à la nuit, vague dorée à la victoire ; clic pour alterner, clic droit pour une lune, compteurs au bord, chrono en pause quand tu quittes l'onglet, plein écran, et l'affichage s'adapte à la taille de la fenêtre. Grille du jour avec série de jours, et des indices qui apprennent les techniques (paire, encadrement, comptage).",
   "icon": "icon.png",
@@ -22,5 +22,79 @@
   "sdk": "2.1.0",
   "permissions": [
     "storage"
+  ],
+  "succes": [
+    {
+      "id": "premier",
+      "nom": "Jour et nuit",
+      "texte": "Résoudre une première grille"
+    },
+    {
+      "id": "vingt5",
+      "nom": "Logicien",
+      "texte": "Résoudre 25 grilles"
+    },
+    {
+      "id": "cent",
+      "nom": "Esprit binaire",
+      "texte": "Résoudre 100 grilles"
+    },
+    {
+      "id": "huit",
+      "nom": "Grille moyenne",
+      "texte": "Résoudre une grille 8 × 8"
+    },
+    {
+      "id": "dix",
+      "nom": "Grande grille",
+      "texte": "Résoudre une grille 10 × 10"
+    },
+    {
+      "id": "eclair",
+      "nom": "Vif comme l'éclair",
+      "texte": "Résoudre une grille 6 × 6 en moins d'une minute"
+    },
+    {
+      "id": "jour",
+      "nom": "La grille du jour",
+      "texte": "Résoudre une grille du jour"
+    },
+    {
+      "id": "jour7",
+      "nom": "Une semaine de grilles",
+      "texte": "Résoudre la grille du jour 7 jours de suite"
+    }
+  ],
+  "records": [
+    {
+      "id": "t6",
+      "nom": "6 × 6",
+      "sens": "bas",
+      "format": "temps"
+    },
+    {
+      "id": "t8",
+      "nom": "8 × 8",
+      "sens": "bas",
+      "format": "temps"
+    },
+    {
+      "id": "t10",
+      "nom": "10 × 10",
+      "sens": "bas",
+      "format": "temps"
+    },
+    {
+      "id": "jour",
+      "nom": "Grille du jour",
+      "sens": "bas",
+      "format": "temps"
+    },
+    {
+      "id": "serie",
+      "nom": "Plus longue série de jours",
+      "sens": "haut",
+      "format": "nombre"
+    }
   ]
 }

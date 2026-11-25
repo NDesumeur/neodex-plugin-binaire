@@ -303,6 +303,9 @@ export default async function (ctx) {
   const saveGames = () => { clearTimeout(gamesTimer); gamesTimer = setTimeout(() => { gamesTimer = null; folder.write('games', games).catch(() => {}); }, 500); };
   const best = (k, v) => { const b = games.best[k]; if (b == null || v > b) { games.best[k] = v; saveGames(); return true; } return false; };
   const gstore = (k, init) => (games[k] ??= init);
+  // les trophées de NeoDex (3.4.8 et plus) : succès et records déclarés dans plugin.json ; sur un NeoDex plus ancien, rien ne se passe
+  const trophy = id => { ctx.games?.unlock(id).catch(() => {}); };
+  const trophyRecord = (id, v) => { if (v != null && Number.isFinite(+v)) ctx.games?.record(id, +v).catch(() => {}); };
 function gameLoop(st, appKey, update, draw) {
   cancelAnimationFrame(st.raf);
   const STEP = 1000 / 60; let acc = 0, last = performance.now();
@@ -481,7 +484,8 @@ cv.onpointerdown = e => {
 };
 cv.oncontextmenu = e => e.preventDefault();
 document.addEventListener('keydown', e => { if (!keyOk(e) || !bn) return; if (e.key === 'Backspace') { e.preventDefault(); const h = bn.hist.pop(); if (h && bn.mode === 'play') { bn.gr[h[1]][h[0]] = h[2]; bn.anim[h[1]][h[0]] = -99; } } });
-function bnInfo() { const b = games.best['binaire' + BN_SIZES[bns.size]], d = bns.daily; showStats([['Record en ' + BN_SIZES[bns.size] + ' × ' + BN_SIZES[bns.size], b ? clock(b) : '—'], ['Grilles résolues', bns.done], ['Grille du jour', d.last === bnToday() ? 'faite ✓' : 'à faire'], ['Série de jours', (d.last === bnToday() || d.last === bnYesterday() ? d.streak : 0) + ' (record ' + d.best + ')']]); $('bnSize').value = bns.size; }
+function bnInfo() {
+  setTimeout(bnTrophies); const b = games.best['binaire' + BN_SIZES[bns.size]], d = bns.daily; showStats([['Record en ' + BN_SIZES[bns.size] + ' × ' + BN_SIZES[bns.size], b ? clock(b) : '—'], ['Grilles résolues', bns.done], ['Grille du jour', d.last === bnToday() ? 'faite ✓' : 'à faire'], ['Série de jours', (d.last === bnToday() || d.last === bnYesterday() ? d.streak : 0) + ' (record ' + d.best + ')']]); $('bnSize').value = bns.size; }
 $('gNew').onclick = () => { bnNew(); $('gNew').blur(); };
 $('bnDaily').onclick = () => { bnNew(true); $('bnDaily').blur(); };
 $('bnHint').onclick = () => {  // une case fausse d'abord ; sinon le pas suivant expliqué ; un second clic le pose
@@ -506,6 +510,13 @@ $('bnSize').onchange = () => { bns.size = +$('bnSize').value; saveGames(); bnNew
   console.assert(ok, 'binaire'); view.dataset.selfcheck = ok ? 'ok' : 'grille';
 }
 const bnOpen = () => { if (!bn) return bnNew(); if (bn.mode === 'pause') bn.mode = 'play'; gameLoop(bn, 'binaire', bnUpdate, bnDraw); };  // revenir sur l'onglet relance la partie là où elle était
+// les trophées, tirés des statistiques et des records gardés (aussi à l'ouverture : ce qui a été fait avant compte)
+function bnTrophies() {
+  const b = games.best, d = bns.daily, sig = [bns.done, b.binaire6, b.binaire8, b.binaire10, b.binaireJour, d.best].join(); if (sig === bnTrophies.sig) return; bnTrophies.sig = sig;
+  for (const n of [6, 8, 10]) trophyRecord('t' + n, b['binaire' + n]); trophyRecord('jour', b.binaireJour); trophyRecord('serie', d.best || null);
+  if (bns.done >= 1) trophy('premier'); if (bns.done >= 25) trophy('vingt5'); if (bns.done >= 100) trophy('cent');
+  if (b.binaire8) trophy('huit'); if (b.binaire10) trophy('dix'); if (b.binaire6 < 60) trophy('eclair'); if (d.best >= 1) trophy('jour'); if (d.best >= 7) trophy('jour7');
+}
 ctx.onOpen(() => { cv.__bn = {st: () => bn, open: bnOpen}; bnOpen(); });
 
 }
